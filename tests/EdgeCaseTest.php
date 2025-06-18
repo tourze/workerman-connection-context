@@ -9,34 +9,31 @@ use Tourze\Workerman\ConnectionContext\Tests\Mock\TestContext;
 
 class EdgeCaseTest extends TestCase
 {
-    private ContextContainer $container;
-    
     public function testGetContextWithNonExistentClass(): void
     {
         $connection = new MockConnection();
         $context = new TestContext('test');
 
-        $this->container->setContext($connection, $context);
+        ContextContainer::getInstance()->setContext($connection, $context);
 
-        $result = $this->container->getContext($connection, \stdClass::class);
+        $result = ContextContainer::getInstance()->getContext($connection, \stdClass::class);
         $this->assertNull($result);
     }
     
-    public function testMultipleContextContainerInstances(): void
+    public function testSingletonBehavior(): void
     {
-        $container1 = new ContextContainer();
-        $container2 = new ContextContainer();
+        $container1 = ContextContainer::getInstance();
+        $container2 = ContextContainer::getInstance();
+
+        $this->assertSame($container1, $container2);
 
         $connection = new MockConnection();
         $context = new TestContext('shared');
 
         $container1->setContext($connection, $context);
 
-        $retrieved1 = $container1->getContext($connection, TestContext::class);
-        $retrieved2 = $container2->getContext($connection, TestContext::class);
-
-        $this->assertSame($context, $retrieved1);
-        $this->assertSame($context, $retrieved2);
+        $retrieved = $container2->getContext($connection, TestContext::class);
+        $this->assertSame($context, $retrieved);
     }
     
     public function testLargeNumberOfConnections(): void
@@ -52,11 +49,11 @@ class EdgeCaseTest extends TestCase
             $connections[$i] = $connection;
             $contexts[$i] = $context;
 
-            $this->container->setContext($connection, $context);
+            ContextContainer::getInstance()->setContext($connection, $context);
         }
 
         for ($i = 0; $i < $connectionCount; $i++) {
-            $retrieved = $this->container->getContext($connections[$i], TestContext::class);
+            $retrieved = ContextContainer::getInstance()->getContext($connections[$i], TestContext::class);
             $this->assertSame($contexts[$i], $retrieved);
             $this->assertEquals('data_' . $i, $retrieved->getData());
             $this->assertEquals($i, $retrieved->getCounter());
@@ -65,7 +62,7 @@ class EdgeCaseTest extends TestCase
         $middleIndex = (int)($connectionCount / 2);
         unset($connections[$middleIndex]);
 
-        $stillExists = $this->container->getContext($connections[0], TestContext::class);
+        $stillExists = ContextContainer::getInstance()->getContext($connections[0], TestContext::class);
         $this->assertNotNull($stillExists);
     }
     
@@ -82,9 +79,9 @@ class EdgeCaseTest extends TestCase
             }
         };
 
-        $this->container->setContext($connection, $anonymousContext);
+        ContextContainer::getInstance()->setContext($connection, $anonymousContext);
 
-        $retrieved = $this->container->getContext($connection, get_class($anonymousContext));
+        $retrieved = ContextContainer::getInstance()->getContext($connection, get_class($anonymousContext));
         $this->assertNotNull($retrieved);
         $this->assertSame($anonymousContext, $retrieved);
         $this->assertEquals('anonymous', $anonymousContext->getValue());
@@ -97,15 +94,15 @@ class EdgeCaseTest extends TestCase
 
         for ($i = 0; $i < $iterations; $i++) {
             $context = new TestContext('iteration_' . $i, $i);
-            $this->container->setContext($connection, $context);
+            ContextContainer::getInstance()->setContext($connection, $context);
 
-            $retrieved = $this->container->getContext($connection, TestContext::class);
+            $retrieved = ContextContainer::getInstance()->getContext($connection, TestContext::class);
             $this->assertInstanceOf(TestContext::class, $retrieved);
             $this->assertEquals('iteration_' . $i, $retrieved->getData());
             $this->assertEquals($i, $retrieved->getCounter());
         }
 
-        $finalContext = $this->container->getContext($connection, TestContext::class);
+        $finalContext = ContextContainer::getInstance()->getContext($connection, TestContext::class);
         $this->assertInstanceOf(TestContext::class, $finalContext);
         $this->assertEquals('iteration_' . ($iterations - 1), $finalContext->getData());
     }
@@ -118,15 +115,15 @@ class EdgeCaseTest extends TestCase
         for ($i = 0; $i < $connectionCount; $i++) {
             $connection = new MockConnection($i);
             $context = new TestContext('conn_' . $i, $i);
-            $this->container->setContext($connection, $context);
+            ContextContainer::getInstance()->setContext($connection, $context);
             $contexts[] = $context;
         }
 
         $this->assertCount($connectionCount, $contexts);
     }
     
-    protected function setUp(): void
+    protected function tearDown(): void
     {
-        $this->container = new ContextContainer();
+        ContextContainer::resetInstance();
     }
 }
