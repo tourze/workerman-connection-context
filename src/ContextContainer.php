@@ -2,19 +2,18 @@
 
 namespace Tourze\Workerman\ConnectionContext;
 
-use WeakMap;
 use Workerman\Connection\ConnectionInterface;
 
 class ContextContainer
 {
     private static ?self $instance = null;
-    
-    /** @var WeakMap<ConnectionInterface, array<class-string, object>> */
-    private WeakMap $connectionMap;
+
+    /** @var \WeakMap<ConnectionInterface, array<class-string, object>> */
+    private \WeakMap $connectionMap;
 
     private function __construct()
     {
-        $this->connectionMap = new WeakMap();
+        $this->connectionMap = new \WeakMap();
     }
 
     /**
@@ -22,9 +21,10 @@ class ContextContainer
      */
     public static function getInstance(): self
     {
-        if (self::$instance === null) {
+        if (null === self::$instance) {
             self::$instance = new self();
         }
+
         return self::$instance;
     }
 
@@ -38,10 +38,6 @@ class ContextContainer
 
     /**
      * 保存连接的上下文对象
-     *
-     * @param ConnectionInterface $connection
-     * @param object $context
-     * @return void
      */
     public function setContext(ConnectionInterface $connection, object $context): void
     {
@@ -63,27 +59,30 @@ class ContextContainer
      * 获取指定连接的上下文对象
      *
      * @template T of object
-     * @param ConnectionInterface $connection
+     *
      * @param class-string<T> $className
+     *
      * @return T|null
      */
-    public function getContext(ConnectionInterface $connection, string $className): ?object
+    public function getContext(ConnectionInterface $connection, string $className)
     {
         $this->initContext($connection);
 
         $list = $this->connectionMap->offsetGet($connection);
         if (isset($list[$className])) {
-            return $list[$className];
+            $context = $list[$className];
+            \assert($context instanceof $className);
+
+            return $context;
         }
+
         return null;
     }
 
     /**
      * 清理指定连接的特定上下文对象
      *
-     * @param ConnectionInterface $connection
      * @param class-string $className
-     * @return void
      */
     public function clearContext(ConnectionInterface $connection, string $className): void
     {
@@ -93,8 +92,8 @@ class ContextContainer
 
         $list = $this->connectionMap->offsetGet($connection);
         unset($list[$className]);
-        
-        if (empty($list)) {
+
+        if ([] === $list) {
             $this->connectionMap->offsetUnset($connection);
         } else {
             $this->connectionMap->offsetSet($connection, $list);
@@ -103,9 +102,6 @@ class ContextContainer
 
     /**
      * 清理指定连接的所有上下文对象
-     *
-     * @param ConnectionInterface $connection
-     * @return void
      */
     public function clearAllContexts(ConnectionInterface $connection): void
     {

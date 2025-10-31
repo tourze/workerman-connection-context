@@ -1,14 +1,13 @@
 {
   "name": "tourze/workerman-connection-context",
-  "description": "连接上下文管理",
+  "description": "Workerman连接上下文管理包，提供线程安全的连接级别上下文存储",
   "license": "MIT",
   "require": {
-    "php": "^8.1",
     "workerman/workerman": "^5.1"
   },
   "require-dev": {
     "phpstan/phpstan": "^2.1",
-    "phpunit/phpunit": "^10.0"
+    "phpunit/phpunit": "^11.5"
   },
   "autoload": {
     "psr-4": {

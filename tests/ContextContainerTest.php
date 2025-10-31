@@ -2,13 +2,18 @@
 
 namespace Tourze\Workerman\ConnectionContext\Tests;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Tourze\Workerman\ConnectionContext\ContextContainer;
 use Tourze\Workerman\ConnectionContext\Tests\Mock\AnotherTestContext;
 use Tourze\Workerman\ConnectionContext\Tests\Mock\MockConnection;
 use Tourze\Workerman\ConnectionContext\Tests\Mock\TestContext;
 
-class ContextContainerTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(ContextContainer::class)]
+final class ContextContainerTest extends TestCase
 {
     public function testSetAndGetContext(): void
     {
@@ -24,7 +29,7 @@ class ContextContainerTest extends TestCase
         $this->assertEquals('hello', $retrievedContext->getData());
         $this->assertEquals(42, $retrievedContext->getCounter());
     }
-    
+
     public function testGetContextReturnsNullWhenNotSet(): void
     {
         $connection = new MockConnection();
@@ -33,7 +38,7 @@ class ContextContainerTest extends TestCase
 
         $this->assertNull($context);
     }
-    
+
     public function testMultipleContextsPerConnection(): void
     {
         $connection = new MockConnection();
@@ -51,7 +56,7 @@ class ContextContainerTest extends TestCase
         $this->assertEquals('test1', $retrievedContext1->getData());
         $this->assertEquals(['key' => 'value'], $retrievedContext2->getMetadata());
     }
-    
+
     public function testMultipleConnectionsWithSameContextType(): void
     {
         $connection1 = new MockConnection(1);
@@ -71,7 +76,7 @@ class ContextContainerTest extends TestCase
         $this->assertEquals('conn1', $retrievedContext1->getData());
         $this->assertEquals('conn2', $retrievedContext2->getData());
     }
-    
+
     public function testContextUpdateOverwritesPrevious(): void
     {
         $connection = new MockConnection();
@@ -87,7 +92,7 @@ class ContextContainerTest extends TestCase
         $this->assertEquals('updated', $retrievedContext->getData());
         $this->assertEquals(2, $retrievedContext->getCounter());
     }
-    
+
     public function testContextIsolationBetweenConnections(): void
     {
         $connection1 = new MockConnection(1);
@@ -102,7 +107,7 @@ class ContextContainerTest extends TestCase
         $this->assertSame($context, $retrievedFromConn1);
         $this->assertNull($retrievedFromConn2);
     }
-    
+
     public function testWeakMapBehavior(): void
     {
         $connection = new MockConnection();
@@ -119,9 +124,40 @@ class ContextContainerTest extends TestCase
         $retrievedContext = ContextContainer::getInstance()->getContext($newConnection, TestContext::class);
         $this->assertNull($retrievedContext);
     }
-    
+
+    public function testClearContext(): void
+    {
+        $connection = new MockConnection();
+        $context1 = new TestContext('test1', 10);
+        $context2 = new AnotherTestContext(['key' => 'value']);
+
+        ContextContainer::getInstance()->setContext($connection, $context1);
+        ContextContainer::getInstance()->setContext($connection, $context2);
+
+        ContextContainer::getInstance()->clearContext($connection, TestContext::class);
+
+        $this->assertNull(ContextContainer::getInstance()->getContext($connection, TestContext::class));
+        $this->assertNotNull(ContextContainer::getInstance()->getContext($connection, AnotherTestContext::class));
+    }
+
+    public function testClearAllContexts(): void
+    {
+        $connection = new MockConnection();
+        $context1 = new TestContext('test1', 10);
+        $context2 = new AnotherTestContext(['key' => 'value']);
+
+        ContextContainer::getInstance()->setContext($connection, $context1);
+        ContextContainer::getInstance()->setContext($connection, $context2);
+
+        ContextContainer::getInstance()->clearAllContexts($connection);
+
+        $this->assertNull(ContextContainer::getInstance()->getContext($connection, TestContext::class));
+        $this->assertNull(ContextContainer::getInstance()->getContext($connection, AnotherTestContext::class));
+    }
+
     protected function tearDown(): void
     {
         ContextContainer::resetInstance();
+        parent::tearDown();
     }
 }

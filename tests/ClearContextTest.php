@@ -2,13 +2,18 @@
 
 namespace Tourze\Workerman\ConnectionContext\Tests;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Tourze\Workerman\ConnectionContext\ContextContainer;
 use Tourze\Workerman\ConnectionContext\Tests\Mock\AnotherTestContext;
 use Tourze\Workerman\ConnectionContext\Tests\Mock\MockConnection;
 use Tourze\Workerman\ConnectionContext\Tests\Mock\TestContext;
 
-class ClearContextTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(ContextContainer::class)]
+final class ClearContextTest extends TestCase
 {
     public function testClearSpecificContext(): void
     {
@@ -71,7 +76,7 @@ class ClearContextTest extends TestCase
         // 清理不存在的连接不应该报错
         $container->clearContext($connection, TestContext::class);
         $container->clearAllContexts($connection);
-        
+
         // 不应该有任何影响
         $this->assertNull($container->getContext($connection, TestContext::class));
     }
@@ -100,5 +105,6 @@ class ClearContextTest extends TestCase
     protected function tearDown(): void
     {
         ContextContainer::resetInstance();
+        parent::tearDown();
     }
 }
